@@ -47,10 +47,11 @@ export default class FormDialog extends React.Component {
         "\n" +
         "Message\n" +
         description,
+      icon_emoji:
+        ":ghost:",
     };
 
-    const url =
-      `https://hooks.slack.com/services/${process.env.REACT_APP_DEV_URL}`;
+    const url = `https://hooks.slack.com/services/${process.env.REACT_APP_DEV_URL}`;
 
     fetch(url, {
       method: "POST",
