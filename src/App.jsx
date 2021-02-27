@@ -1,50 +1,31 @@
-import React from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import './assets/styles/style.css'
 import {AnswersList, Chats} from './components/index'
 import FormDialog from './components/Forms/FormDialog'
 import {db} from './firebase/index'
 
-class App extends React.Component {
-  constructor(props) {
-    super(props)
-    this.state = {
-      answers: [],
-      chats: [],
-      currentId: "init",
-      dataset: {},
-      open: false
-    }
-    this.selectAnswer = this.selectAnswer.bind(this)
-    this.handleClickOpen = this.handleClickOpen.bind(this)
-    this.handleClose = this.handleClose.bind(this)
+const App = () =>  {
+  const [answers, setAnswers] = useState([])
+  const [chats, setChats] = useState([])
+  const [currentId, setCurrentId] = useState("init")
+  const [dataset, setDataset] = useState({})
+  const [open, setOpen] = useState(false)
 
 
-  }
-
-  displayNextQuestion = (nextQuestionId) => {
-    const chats = this.state.chats
-    chats.push({
-      text: this.state.dataset[nextQuestionId].question,
+  const displayNextQuestion = (nextQuestionId, nextDataset) => {
+    addChats({
+      text: dataset[nextQuestionId].question,
       type: 'question'
     })
 
-    this.setState({
-      answers: this.state.dataset[nextQuestionId].answers,
-      chats: chats,
-      currentId: nextQuestionId
-    })
+      setAnswers(nextDataset.answers)
+      setCurrentId(nextQuestionId)
   }
 
-  selectAnswer = (selectedAnswer, nextQuestionId) => {
+  const selectAnswer = (selectedAnswer, nextQuestionId) => {
     switch(true) {
-      case (nextQuestionId === "init"):
-        setTimeout(() => {
-          this.displayNextQuestion(nextQuestionId)
-        }, 500)
-        break;
-
       case(nextQuestionId === "contact"):
-        this.handleClickOpen();
+        handleClickOpen();
         break;
 
 
@@ -57,59 +38,49 @@ class App extends React.Component {
 
 
       default:
-        const chats = this.state.chats
-        chats.push({
-          text: selectedAnswer,
-          type: 'answer'
-        })
-    
-        this.setState({
-          chats: chats
-        })
+        addChats({
+            text: selectedAnswer,
+            type: 'answer'
+          })
 
-        setTimeout(() => {
-          this.displayNextQuestion(nextQuestionId)
-        }, 500)
+        setTimeout(() => { displayNextQuestion(nextQuestionId, dataset[nextQuestionId]) }, 500)
         break;
     }
   }
 
-  handleClickOpen = () => {
-    this.setState({
-        open: true
+  const addChats = (chat) => {
+    setChats(prevChats => {
+      return [...prevChats, chat]
     })
-  };
-
-  handleClose = () => {
-    this.setState({
-        open: false
-    })
-  };
-
-  initDataset = (dataset) => {
-    this.setState({dataset: dataset});
   }
 
-  componentDidMount() {
+  const handleClickOpen = () => {
+    setOpen(true)
+  };
+
+  const handleClose = useCallback(() => {
+    setOpen(false)
+  }, [setOpen])
+
+  useEffect(() => {
     (async() => {
-      const dataset = this.state.dataset
+      const initDataset = {}
 
       await db.collection('questions').get().then(snapshots => {
         snapshots.forEach(doc => {
           const id = doc.id
           const data = doc.data()
-          dataset[id] = data
+          initDataset[id] = data
         })
       })
 
-      this.initDataset(dataset)
-      const initAnswer = ''
-      this.selectAnswer(initAnswer, this.state.currentId)
+      setDataset(initDataset)
+      displayNextQuestion(currentId, initDataset[currentId])
     })();
 
-  }
+  }, [])
 
-  componentDidUpdate(prevProps, prevState, snapshot) {
+  useEffect(() => {
     const scrollArea = document.querySelector('#scroll-area')
     if (scrollArea) {
       // scrollArea.scrollTop = scrollArea.scrollHeight
@@ -118,21 +89,21 @@ class App extends React.Component {
         behavior: 'smooth'
       })
     }
-  }
+  })
+  
 
-  render() {
     return (
       <div>
         <section className="c-section">
           <div className="c-box">
-            <Chats chats={this.state.chats}/>
-            <AnswersList answers={this.state.answers} select={this.selectAnswer} />
-            <FormDialog open={this.state.open} handleClose={this.handleClose} />
+            <Chats chats={chats}/>
+            <AnswersList answers={answers} select={selectAnswer} />
+            <FormDialog open={open} handleClose={handleClose} />
           </div>
         </section>
       </div>
     );
-  }
 }
+
 
 export default App;
